@@ -1,118 +1,101 @@
-// GameBoard Function
-function GameBoard() {
-    const rows = 3;
-    const columns = 3;
-    const board = Array.from({ length: rows }, () => Array(columns).fill(""));
-    const getBoard = () => board;
-    const resetBoard = () => {
-        for (let i = 0; i < rows; i++) {
-            board[i].fill("");
+// script.js
+
+document.addEventListener("DOMContentLoaded", () => {
+    const boardElement = document.getElementById("game-board");
+    const statusElement = document.getElementById("game-status");
+    const resetButton = document.getElementById("reset-button");
+
+    let board = Array.from({ length: 3 }, () => Array(3).fill(""));
+    let currentPlayer = { name: "Player One", mark: "X" };
+    let isGameOver = false;
+
+    // Initialize board
+    const initBoard = () => {
+        boardElement.innerHTML = "";
+        board.forEach((row, rowIndex) => {
+            row.forEach((_, colIndex) => {
+                const cell = document.createElement("div");
+                cell.classList.add("cell");
+                cell.dataset.row = rowIndex;
+                cell.dataset.col = colIndex;
+                boardElement.appendChild(cell);
+            });
+        });
+    };
+
+    // Switch player
+    const switchPlayer = () => {
+        currentPlayer = currentPlayer.mark === "X"
+            ? { name: "Player Two", mark: "O" }
+            : { name: "Player One", mark: "X" };
+    };
+
+    // Check winner
+    const checkWinner = () => {
+        // Check rows, columns, and diagonals
+        const checkLine = (line) => line.every(cell => cell === currentPlayer.mark);
+
+        for (let i = 0; i < 3; i++) {
+            if (checkLine(board[i]) || checkLine(board.map(row => row[i]))) return true;
         }
-    };
 
-    return {
-        getBoard,
-        resetBoard,
-    };
-}
-
-// GameController Function
-function GameController(playerOneName = "Player One", playerTwoName = "Player Two") {
-    const players = [
-        { name: playerOneName, mark: "X" },
-        { name: playerTwoName, mark: "O" },
-    ];
-    let currentPlayer = players[0];
-
-    const switchCurrentPlayer = () => {
-        currentPlayer = currentPlayer === players[0] ? players[1] : players[0];
-    };
-
-    const getCurrentPlayer = () => currentPlayer;
-
-    const makeMove = (row, col, board) => {
-        if (board[row][col] === "") {
-            board[row][col] = currentPlayer.mark; // Place mark
+        // Check diagonals
+        if (checkLine([board[0][0], board[1][1], board[2][2]]) ||
+            checkLine([board[0][2], board[1][1], board[2][0]])) {
             return true;
         }
-        return false; // Invalid move
+
+        return false;
     };
 
-    return {
-        getCurrentPlayer,
-        switchCurrentPlayer,
-        makeMove,
+    // Check draw
+    const checkDraw = () => {
+        return board.flat().every(cell => cell !== "");
     };
-}
 
-// Check for win conditions
-const checkWinner = (board) => {
-    const size = board.length;
+    // Handle cell click
+    const handleCellClick = (e) => {
+        if (isGameOver) return;
 
-    // Check rows and columns
-    for (let i = 0; i < size; i++) {
-        if (board[i].every(cell => cell === board[i][0] && cell !== "")) return board[i][0];
-        if (board.map(row => row[i]).every(cell => cell === board[0][i] && cell !== "")) return board[0][i];
-    }
+        const row = parseInt(e.target.dataset.row);
+        const col = parseInt(e.target.dataset.col);
 
-    // Check diagonals
-    if (board.every((row, i) => row[i] === board[0][0] && row[i] !== "")) return board[0][0];
-    if (board.every((row, i) => row[size - 1 - i] === board[0][size - 1] && row[size - 1 - i] !== "")) return board[0][size - 1];
+        if (board[row][col] === "") {
+            board[row][col] = currentPlayer.mark;
+            e.target.textContent = currentPlayer.mark;
+            e.target.classList.add("taken");
 
-    return null; // No winner
-};
-
-const isDraw = (board) => {
-    return board.flat().every(cell => cell !== "");
-};
-
-const displayBoard = (board) => {
-    console.log("\nCurrent Board:");
-    board.forEach(row => console.log(row.join(" | ")));
-    console.log("");
-};
-
-// Main Game Loop
-function playTicTacToe() {
-    const gameBoard = GameBoard();
-    const gameController = GameController();
-    const board = gameBoard.getBoard();
-    let gameOver = false;
-
-    console.log("Welcome to Tic-Tac-Toe!");
-
-    while (!gameOver) {
-        displayBoard(board);
-        const currentPlayer = gameController.getCurrentPlayer();
-        console.log(`${currentPlayer.name}'s turn (${currentPlayer.mark})`);
-
-        const row = parseInt(prompt("Enter row (0-2): "));
-        const col = parseInt(prompt("Enter column (0-2): "));
-
-        if (row < 0 || row > 2 || col < 0 || col > 2 || isNaN(row) || isNaN(col)) {
-            console.log("Invalid input. Please enter numbers between 0 and 2.");
-            continue;
-        }
-
-        if (gameController.makeMove(row, col, board)) {
-            const winner = checkWinner(board);
-            if (winner) {
-                displayBoard(board);
-                console.log(`${currentPlayer.name} wins!`);
-                gameOver = true;
-            } else if (isDraw(board)) {
-                displayBoard(board);
-                console.log("It's a draw!");
-                gameOver = true;
+            if (checkWinner()) {
+                statusElement.textContent = `${currentPlayer.name} wins!`;
+                isGameOver = true;
+            } else if (checkDraw()) {
+                statusElement.textContent = "It's a draw!";
+                isGameOver = true;
             } else {
-                gameController.switchCurrentPlayer();
+                switchPlayer();
+                statusElement.textContent = `${currentPlayer.name}'s turn (${currentPlayer.mark})`;
             }
-        } else {
-            console.log("Cell already taken! Try again.");
         }
-    }
+    };
 
-    console.log("Game over!");
-}
+    // Reset game
+    const resetGame = () => {
+        board = Array.from({ length: 3 }, () => Array(3).fill(""));
+        currentPlayer = { name: "Player One", mark: "X" };
+        isGameOver = false;
+        statusElement.textContent = "Player One's turn (X)";
+        initBoard();
+    };
 
-playTicTacToe();
+    // Event listeners
+    boardElement.addEventListener("click", (e) => {
+        if (e.target.classList.contains("cell")) {
+            handleCellClick(e);
+        }
+    });
+
+    resetButton.addEventListener("click", resetGame);
+
+    // Initialize game
+    initBoard();
+});
